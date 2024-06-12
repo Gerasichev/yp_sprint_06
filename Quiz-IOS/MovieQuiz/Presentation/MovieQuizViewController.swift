@@ -1,6 +1,16 @@
 import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
+    
+    func didLoadDataFromServer() {
+        ActivityIndicator.isHidden = true 
+        questionFactory?.requestNextQuestion()
+    }
+    
+    func didFailToLoadData(with error: Error) {
+        showNetworkError(message: error.localizedDescription)
+    }
+    
 
     @IBOutlet private weak var noButton: UIButton!
     @IBOutlet private weak var yesButton: UIButton!
@@ -9,6 +19,34 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet private weak var indexLabel: UILabel!
     @IBOutlet private weak var previewImage: UIImageView!
 
+    @IBOutlet private weak var ActivityIndicator: UIActivityIndicatorView!
+    
+    private func showLoadingIndicator() {
+        ActivityIndicator.isHidden = false
+        ActivityIndicator.startAnimating()
+    }
+    
+    private func hideLoadingIndicator() {
+        ActivityIndicator.isHidden = true
+    }
+    
+    private func showNetworkError(message: String) {
+        hideLoadingIndicator()
+        
+        let model = AlertModel(title: "Ошибка",
+                               message: message,
+                               buttonText: "Попробовать еще раз") { [weak self] in
+            guard let self = self else { return }
+            
+            self.currentQuestionIndex = 0
+            self.correctAnswers = 0
+            
+            self.questionFactory?.requestNextQuestion()
+        }
+        
+        alertPresenter.showAlert(model: model)
+    }
+    
     private var questionFactory: QuestionFactoryProtocol?
     private var statisticService: StatisticService!
     
@@ -21,16 +59,14 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         questionTitleLabel.font = UIFont(name: "YSDisplay-Medium", size: 20)
         indexLabel.font = UIFont(name: "YSDisplay-Medium", size: 20)
         
-        // Инициализация фабрики вопросов
-        let questionFactory = QuestionFactory()
-        questionFactory.setup(delegate: self)
-        self.questionFactory = questionFactory
-        questionFactory.requestNextQuestion()
-        
         previewImage.layer.cornerRadius = 20
         
-        // Инициализация сервиса статистики
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
         statisticService = StatisticServiceImplementation()
+
+        showLoadingIndicator()
+        questionFactory?.loadData()
+        
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
@@ -60,7 +96,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
         return QuizStepViewModel(
-            image: UIImage(named: model.image) ?? UIImage(),
+            image: UIImage(data: model.image) ?? UIImage(),
             question: model.text,
             questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")
     }

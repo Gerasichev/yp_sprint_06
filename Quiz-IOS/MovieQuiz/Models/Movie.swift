@@ -37,9 +37,10 @@ func getMovie(from jsonString: String) -> Movie? {
 
     do {
         
-        let result = try? JSONDecoder().decode(Top.self, from: data)
-        return result?.items.first
+        let result = try JSONDecoder().decode(Top.self, from: data)
+        return result.items.first
     } catch {
+        
         print("Failed to parse: \(error.localizedDescription)")
         return nil
     }
