@@ -4,12 +4,14 @@
 //
 //  Created by Герасичев Сергей on 09.06.2024.
 //
+import UIKit
 
-import Foundation
+protocol NetworkRouting {
+    func fetch(url: URL, handler: @escaping (Result<Data, Error>) -> Void)
+}
 
-/// Отвечает за загрузку данных по URL
-struct NetworkClient {
-
+struct NetworkClient: NetworkRouting {
+    
     private enum NetworkError: Error {
         case codeError
     }
@@ -24,9 +26,9 @@ struct NetworkClient {
                 return
             }
             
-            // Проверяем, что нам пришёл успешный код ответа
+            // Проверяем, что пришёл успешный код ответа
             if let response = response as? HTTPURLResponse,
-                response.statusCode < 200 || response.statusCode >= 300 {
+                response.statusCode < 200 && response.statusCode >= 300 {
                 handler(.failure(NetworkError.codeError))
                 return
             }
